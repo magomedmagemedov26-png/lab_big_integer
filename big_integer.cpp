@@ -31,7 +31,7 @@ BigInteger::BigInteger(const std::string& str) {
         return;
     }
 
-    int start = 0;
+    size_t start = 0;
     if (str[0] == '-') {
         negative_ = true;
         start = 1;
@@ -39,7 +39,9 @@ BigInteger::BigInteger(const std::string& str) {
         negative_ = false;
     }
 
-    for (int i = str.length() - 1; i >= start; --i) {
+    // Безопасный обратный цикл с использованием size_t (без ворнингов)
+    for (size_t i = str.length(); i > start; ) {
+        --i;
         digits_.push_back(str[i] - '0');
     }
 
@@ -51,6 +53,8 @@ BigInteger::BigInteger(const std::string& str) {
         negative_ = false;
     }
 }
+
+// ======================= Comparison ==========================
 
 bool BigInteger::operator==(const BigInteger& rhs) const {
     if (negative_ != rhs.negative_) return false;
@@ -77,7 +81,8 @@ bool BigInteger::operator<(const BigInteger& rhs) const {
         }
     }
 
-    for (int i = digits_.size() - 1; i >= 0; --i) {
+    for (size_t i = digits_.size(); i > 0; ) {
+        --i;
         if (digits_[i] != rhs.digits_[i]) {
             if (negative_) {
                 return digits_[i] > rhs.digits_[i];
@@ -144,7 +149,7 @@ BigInteger BigInteger::operator-(const BigInteger& rhs) const {
     BigInteger abs_rhs = rhs; abs_rhs.negative_ = false;
 
     if (abs_this < abs_rhs) {
-        BigInteger result = rhs - *this;
+        BigInteger result = abs_rhs - abs_this; 
         result.negative_ = !negative_;
         return result;
     }
@@ -173,7 +178,7 @@ BigInteger BigInteger::operator-(const BigInteger& rhs) const {
         result.digits_.pop_back();
     }
     if (result.digits_.size() == 1 && result.digits_[0] == 0) {
-        result.negative_ = false; // Не бывает -0
+        result.negative_ = false;
     }
 
     return result;
@@ -213,7 +218,8 @@ BigInteger BigInteger::operator/(const BigInteger& rhs) const {
     BigInteger abs_rhs = rhs;
     abs_rhs.negative_ = false;
 
-    for (int i = digits_.size() - 1; i >= 0; --i) {
+    for (size_t i = digits_.size(); i > 0; ) {
+        --i;
         if (!(current.digits_.size() == 1 && current.digits_[0] == 0)) {
             current.digits_.insert(current.digits_.begin(), digits_[i]);
         } else {
@@ -283,6 +289,8 @@ BigInteger& BigInteger::operator%=(const BigInteger& rhs) {
     return *this;
 }
 
+// ====================== Unary ================================
+
 BigInteger BigInteger::operator-() const {
     BigInteger result = *this;
     if (!(result.digits_.size() == 1 && result.digits_[0] == 0)) {
@@ -313,10 +321,42 @@ BigInteger BigInteger::operator--(int) {
     return temp;
 }
 
+// ======================== Misc ===============================
+
 std::string BigInteger::to_string() const {
     std::string str;
     if (negative_) {
         str += '-';
     }
-    for (int i = digits_.size() - 1; i >= 0; --i) {
+    for (size_t i = digits_.size(); i > 0; ) {
+        --i;
         str += std::to_string(digits_[i]);
+    }
+    return str;
+}
+
+bool BigInteger::is_zero() const {
+    return (digits_.size() == 1 && digits_[0] == 0);
+}
+
+bool BigInteger::is_negative() const {
+    return negative_;
+}
+
+BigInteger::operator bool() const {
+    return !is_zero();
+}
+
+// ======================== I/O ================================
+
+std::ostream& operator<<(std::ostream& os, const BigInteger& value) {
+    os << value.to_string();
+    return os;
+}
+
+std::istream& operator>>(std::istream& is, BigInteger& value) {
+    std::string str;
+    is >> str;
+    value = BigInteger(str);
+    return is;
+}
